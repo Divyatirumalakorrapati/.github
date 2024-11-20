@@ -13,54 +13,30 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout the code
+      # Step 1: Checkout code
       - name: Checkout code
-        uses: actions/checkout@v3  # Latest stable version
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Ensure all history is fetched to avoid any shallow cloning issues
 
-      # Set up dependencies (example: set up C++ toolchain, etc.)
+      # Step 2: Set up C++ toolchain (adjust if needed)
       - name: Set up C++ toolchain
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential cmake clang
 
-      # Install DeepState Fuzzing Framework
-      - name: Install DeepState
+      # Step 3: Check if the repository was checked out correctly
+      - name: Verify repository contents
         run: |
-          git clone https://github.com/syuacr/DeepState.git
-          cd DeepState
-          mkdir build
-          cd build
-          cmake ..
-          make
-          sudo make install
+          ls -alh
+          git status
 
-      # Build your project
+      # Step 4: Run your build steps (replace with your actual build commands)
       - name: Build the Project
         run: |
           mkdir build
           cd build
           cmake ..
           make
-
-      # Run DeepState fuzzing (you can configure the fuzzer here)
-      - name: Run DeepState Fuzzer
-        run: |
-          ./fuzzer_target_name_fuzzer   # Replace with actual fuzzer name and command
-
-      # Run symbolic execution tool (e.g., using KLEE)
-      - name: Run KLEE
-        run: |
-          mkdir klee-out
-          klee --output-dir=klee-out ./fuzzer_target_name   # Replace with actual target
-
-      # Check for crashes and assert properties
-      - name: Check for crashes
-        run: |
-          # Add checks to look for crashes, memory issues, etc.
-          ./check_for_crashes.sh    # Replace with actual crash-checking script
-
-      # Add your additional properties or assertions here
-      - name: Assert Property
-        run: |
-          # Add any functionality assertion here, for example:
-          ./run_property_assertion.sh    # Replace with actual assertion script
+          
+      # Step 5: Add further steps such as fuzzing and symbolic execution once checkout and build are confirmed working.
