@@ -19,7 +19,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake clang clang++ git make python3
+          sudo apt-get install -y cmake clang clang++ git make python3 build-essential libklee-dev
 
       - name: Install DeepState
         run: |
