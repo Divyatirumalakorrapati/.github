@@ -1,4 +1,4 @@
-name: Fuzzing Workflow
+name: Fuzzing and Symbolic Execution
 
 on:
   push:
@@ -13,30 +13,39 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout code
+      # Set up Node.js 20 to avoid deprecated version warning
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      # Checkout the code from the repository
       - name: Checkout code
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0  # Ensure all history is fetched to avoid any shallow cloning issues
 
-      # Step 2: Set up C++ toolchain (adjust if needed)
-      - name: Set up C++ toolchain
+      # Install dependencies (clang, llvm, cmake, etc.)
+      - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake clang
+          sudo apt-get install -y clang llvm cmake make
+          sudo apt-get install -y python3 python3-pip
+          pip3 install deepstate  # Install DeepState for fuzzing
 
-      # Step 3: Check if the repository was checked out correctly
-      - name: Verify repository contents
+      # Compile and run DeepState fuzzing (assuming your harness is in fuzzing.cpp)
+      - name: Compile and run DeepState fuzzing
         run: |
-          ls -alh
-          git status
+          clang++ -g -O1 -std=c++17 -I$HOME/deepstate/include fuzzing.cpp -o fuzzing
+          ./fuzzing
 
-      # Step 4: Run your build steps (replace with your actual build commands)
-      - name: Build the Project
+      # Install KLEE (or another symbolic execution tool)
+      - name: Install KLEE
         run: |
-          mkdir build
-          cd build
-          cmake ..
-          make
-          
-      # Step 5: Add further steps such as fuzzing and symbolic execution once checkout and build are confirmed working.
+          sudo apt-get install -y klee
+          klee fuzzing.bc
+
+      # Optionally, upload artifacts or results from fuzzing or symbolic execution
+      - name: Upload fuzzing results
+        uses: actions/upload-artifact@v3
+        with:
+          name: fuzzing-results
+          path: ./fuzzing_output
