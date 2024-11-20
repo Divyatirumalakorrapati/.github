@@ -1,0 +1,49 @@
+name: Fuzzing and Symbolic Execution
+
+on:
+  push:
+    branches:
+      - main  # Trigger on push to the main branch
+  pull_request:
+    branches:
+      - main  # Trigger on pull request to the main branch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest  # Using Ubuntu as the runner
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3  # This will checkout your code
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake clang clang++ git make python3
+
+      - name: Install DeepState
+        run: |
+          git clone --branch master https://github.com/trailofbits/deepstate.git  # Clone DeepState repo
+          cd deepstate
+          mkdir build
+          cd build
+          cmake ..
+          make
+          sudo make install  # Build and install DeepState
+
+      - name: Build the fuzzer with DeepState
+        run: |
+          mkdir build
+          cd build
+          cmake ..
+          make  # Build the project with DeepState enabled
+
+      - name: Run libFuzzer tests
+        run: |
+          cd build
+          ./ValidatePayload_fuzzer  # Run the fuzzer on the harness
+
+      - name: Run KLEE symbolic execution
+        run: |
+          cd build
+          klee --libc=uclibc --posix-runtime ./ValidatePayload_fuzzer  # Run symbolic execution with KLEE
