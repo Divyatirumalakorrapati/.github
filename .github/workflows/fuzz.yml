@@ -15,7 +15,7 @@ jobs:
     steps:
       # Checkout the repository code
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4 # Updated to use Node.js 20
 
       # Install dependencies
       - name: Install DeepState and Dependencies
@@ -28,9 +28,10 @@ jobs:
       # Compile the DeepState harness
       - name: Compile the Fuzzing Harness
         run: |
-          clang++ -g -O1 -std=c++17 -I/usr/local/include/deepstate fuzz/ValidatePayload_fuzzer.cpp -o fuzzing
+          mkdir -p build
+          clang++ -g -O1 -std=c++17 -I/usr/local/include/deepstate fuzz/ValidatePayload_fuzzer.cpp -o build/fuzzing
 
       # Run the fuzzing test
       - name: Run Fuzzing
         run: |
-          ./fuzzing --fuzz --timeout=30
+          ./build/fuzzing --fuzz --timeout=30
