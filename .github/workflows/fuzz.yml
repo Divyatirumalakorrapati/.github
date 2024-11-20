@@ -1,49 +1,66 @@
-name: Fuzzing and Symbolic Execution
+name: Fuzzing Workflow
 
 on:
   push:
     branches:
-      - main  # Trigger on push to the main branch
+      - main
   pull_request:
     branches:
-      - main  # Trigger on pull request to the main branch
+      - main
 
 jobs:
-  build:
-    runs-on: ubuntu-latest  # Using Ubuntu as the runner
+  fuzzing:
+    runs-on: ubuntu-latest
 
     steps:
+      # Checkout the code
       - name: Checkout code
-        uses: actions/checkout@v3  # This will checkout your code
+        uses: actions/checkout@v3  # Latest stable version
 
-      - name: Install dependencies
+      # Set up dependencies (example: set up C++ toolchain, etc.)
+      - name: Set up C++ toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake clang clang++ git make python3 build-essential libklee-dev
+          sudo apt-get install -y build-essential cmake clang
 
+      # Install DeepState Fuzzing Framework
       - name: Install DeepState
         run: |
-          git clone --branch master https://github.com/trailofbits/deepstate.git  # Clone DeepState repo
-          cd deepstate
+          git clone https://github.com/syuacr/DeepState.git
+          cd DeepState
           mkdir build
           cd build
           cmake ..
           make
-          sudo make install  # Build and install DeepState
+          sudo make install
 
-      - name: Build the fuzzer with DeepState
+      # Build your project
+      - name: Build the Project
         run: |
           mkdir build
           cd build
           cmake ..
-          make  # Build the project with DeepState enabled
+          make
 
-      - name: Run libFuzzer tests
+      # Run DeepState fuzzing (you can configure the fuzzer here)
+      - name: Run DeepState Fuzzer
         run: |
-          cd build
-          ./ValidatePayload_fuzzer  # Run the fuzzer on the harness
+          ./fuzzer_target_name_fuzzer   # Replace with actual fuzzer name and command
 
-      - name: Run KLEE symbolic execution
+      # Run symbolic execution tool (e.g., using KLEE)
+      - name: Run KLEE
         run: |
-          cd build
-          klee --libc=uclibc --posix-runtime ./ValidatePayload_fuzzer  # Run symbolic execution with KLEE
+          mkdir klee-out
+          klee --output-dir=klee-out ./fuzzer_target_name   # Replace with actual target
+
+      # Check for crashes and assert properties
+      - name: Check for crashes
+        run: |
+          # Add checks to look for crashes, memory issues, etc.
+          ./check_for_crashes.sh    # Replace with actual crash-checking script
+
+      # Add your additional properties or assertions here
+      - name: Assert Property
+        run: |
+          # Add any functionality assertion here, for example:
+          ./run_property_assertion.sh    # Replace with actual assertion script
