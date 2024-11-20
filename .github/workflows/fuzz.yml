@@ -1,4 +1,4 @@
-name: Fuzzing and Symbolic Execution
+name: Run DeepState Fuzzing
 
 on:
   push:
@@ -13,39 +13,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Set up Node.js 20 to avoid deprecated version warning
-      - name: Set up Node.js 20
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20'
-
-      # Checkout the code from the repository
+      # Checkout the repository code
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Install dependencies (clang, llvm, cmake, etc.)
-      - name: Install dependencies
+      # Install dependencies
+      - name: Install DeepState and Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y clang llvm cmake make
           sudo apt-get install -y python3 python3-pip
-          pip3 install deepstate  # Install DeepState for fuzzing
+          pip3 install deepstate
 
-      # Compile and run DeepState fuzzing (assuming your harness is in fuzzing.cpp)
-      - name: Compile and run DeepState fuzzing
+      # Compile the DeepState harness
+      - name: Compile the Fuzzing Harness
         run: |
-          clang++ -g -O1 -std=c++17 -I$HOME/deepstate/include fuzzing.cpp -o fuzzing
-          ./fuzzing
+          clang++ -g -O1 -std=c++17 -I/usr/local/include/deepstate fuzz/ValidatePayload_fuzzer.cpp -o fuzzing
 
-      # Install KLEE (or another symbolic execution tool)
-      - name: Install KLEE
+      # Run the fuzzing test
+      - name: Run Fuzzing
         run: |
-          sudo apt-get install -y klee
-          klee fuzzing.bc
-
-      # Optionally, upload artifacts or results from fuzzing or symbolic execution
-      - name: Upload fuzzing results
-        uses: actions/upload-artifact@v3
-        with:
-          name: fuzzing-results
-          path: ./fuzzing_output
+          ./fuzzing --fuzz --timeout=30
