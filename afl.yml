@@ -1,0 +1,52 @@
+name: AFL++ Fuzzing
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  fuzzing:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: Install AFL++ and dependencies
+      - name: Install AFL++
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang llvm build-essential afl++
+
+      # Step 3: Compile the target code with AFL++ instrumentation
+      - name: Compile with AFL++
+        run: |
+          mkdir -p afl_output
+          clang -fsanitize=address -O2 -fno-omit-frame-pointer -g -o validatePayload_afl -fsanitize=fuzzer validatePayload_fuzzer.cpp
+
+      # Step 4: Prepare test cases
+      - name: Create Input Directory
+        run: |
+          mkdir -p afl_input
+          echo "test_payload" > afl_input/testcase
+
+      # Step 5: Run AFL++ Fuzzer
+      - name: Run AFL++
+        run: |
+          afl-fuzz -i afl_input -o afl_output -- ./validatePayload_afl
+
+      # Step 6: Archive the fuzzing results
+      - name: Archive Results
+        run: |
+          tar -czf afl_results.tar.gz afl_output
+          echo "Fuzzing results archived."
+
+      # Step 7: Upload results as an artifact
+      - name: Upload Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: afl-fuzz-results
+          path: afl_results.tar.gz
