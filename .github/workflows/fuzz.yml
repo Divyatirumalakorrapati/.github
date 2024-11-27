@@ -1,4 +1,4 @@
-name: Run Fuzzing and Symbolic Execution Tests
+name: Fuzzing and Symbolic Execution Tests
 
 on:
   push:
@@ -19,25 +19,48 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang llvm klee afl++
+          sudo apt-get install -y clang llvm klee afl++ build-essential
 
-      # Step 3: Build and run fuzzing with AFL++
-      - name: Compile and run AFL++
+      # Step 3: Debug environment
+      - name: Debug environment
         run: |
+          echo "Current directory: $(pwd)"
+          echo "Available files:"
+          ls -R
+          echo "Environment variables:"
+          env
+
+      # Step 4: Compile and run AFL++
+      - name: Compile for AFL++
+        run: |
+          set -e
           clang++ -g -O1 -fsanitize=address,fuzzer -o validate_fuzz validate_fuzz.cpp
           mkdir -p afl_input
           echo "test_payload" > afl_input/testcase
-          afl-fuzz -i afl_input -o afl_output ./validate_fuzz --timeout=60
 
-      # Step 4: Prepare and run symbolic execution with KLEE
-      - name: Run KLEE
+      - name: Run AFL++ Fuzzer
+        run: |
+          afl-fuzz -i afl_input -o afl_output -- ./validate_fuzz
+
+      # Step 5: Compile for KLEE
+      - name: Compile for KLEE
         run: |
           clang -I/usr/lib/klee/include -emit-llvm -c -g validate_fuzz.cpp -o validate_fuzz.bc
+
+      # Step 6: Run KLEE Symbolic Execution
+      - name: Run KLEE
+        run: |
           klee validate_fuzz.bc
 
-      # Step 5: Generate and display test results
-      - name: Upload Results
+      # Step 7: Capture results
+      - name: Capture results
         run: |
-          echo "Uploading results"
           tar -czf results.tar.gz afl_output klee-last
-          echo "Results generated"
+          echo "Results archived as results.tar.gz"
+
+      # Step 8: Upload results as artifacts
+      - name: Upload results
+        uses: actions/upload-artifact@v3
+        with:
+          name: fuzzing-results
+          path: results.tar.gz
