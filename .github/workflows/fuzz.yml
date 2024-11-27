@@ -1,37 +1,43 @@
-name: Run DeepState Fuzzing
+name: Run Fuzzing and Symbolic Execution Tests
 
 on:
   push:
     branches:
       - main
   pull_request:
-    branches:
-      - main
 
 jobs:
   fuzzing:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout the repository code
+      # Step 1: Checkout the repository
       - name: Checkout code
-        uses: actions/checkout@v4 # Updated to use Node.js 20
+        uses: actions/checkout@v3
 
-      # Install dependencies
-      - name: Install DeepState and Dependencies
+      # Step 2: Install required dependencies
+      - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang llvm cmake make
-          sudo apt-get install -y python3 python3-pip
-          pip3 install deepstate
+          sudo apt-get install -y clang llvm klee afl++
 
-      # Compile the DeepState harness
-      - name: Compile the Fuzzing Harness
+      # Step 3: Build and run fuzzing with AFL++
+      - name: Compile and run AFL++
         run: |
-          mkdir -p build
-          clang++ -g -O1 -std=c++17 -I/usr/local/include/deepstate fuzz/ValidatePayload_fuzzer.cpp -o build/fuzzing
+          clang++ -g -O1 -fsanitize=address,fuzzer -o validate_fuzz validate_fuzz.cpp
+          mkdir -p afl_input
+          echo "test_payload" > afl_input/testcase
+          afl-fuzz -i afl_input -o afl_output ./validate_fuzz --timeout=60
 
-      # Run the fuzzing test
-      - name: Run Fuzzing
+      # Step 4: Prepare and run symbolic execution with KLEE
+      - name: Run KLEE
         run: |
-          ./build/fuzzing --fuzz --timeout=30
+          clang -I/usr/lib/klee/include -emit-llvm -c -g validate_fuzz.cpp -o validate_fuzz.bc
+          klee validate_fuzz.bc
+
+      # Step 5: Generate and display test results
+      - name: Upload Results
+        run: |
+          echo "Uploading results"
+          tar -czf results.tar.gz afl_output klee-last
+          echo "Results generated"
